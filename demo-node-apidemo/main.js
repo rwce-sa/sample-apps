@@ -760,6 +760,7 @@ app.get('/getcomposition', function(req, res){
 
 app.get('/appfrompackage', function(req, res){
    var appname = req.query['app'];
+   var startcommand = req.query['startcommand'];
    var packagename = req.query['package'];
    var namespace = req.query['ns'];
    var appfrompackage = 'package::' + packagename;
@@ -791,7 +792,7 @@ app.get('/appfrompackage', function(req, res){
         }],
         "processes": { "app": { 
             "start_command_raw": [],
-            "start_command": "node /app/main",
+            "start_command": startcommand,
             "start_command_timeout": 30,
             "stop_command_raw": [],
             "stop_command": "",
