@@ -2,7 +2,7 @@
 
 This is a sample bash application that runs two scripts, as accepted by Apcera Platform's built-in bash stager:
 
-1. `bash_start.sh` installs the MySQL client software, creates a crontab file `/etc/cron.d/backup`, starts a monitoring loop, and starts cron.
+1. `bash_start.sh` creates a crontab file `/etc/cron.d/backup`, starts a monitoring loop, and starts cron.
 2. `mysql_backup.sh` is executed once an hour by cron. It backs up the MySQL server that's bound to the app and saves the backup onto the NFS service that's bound to the app.
 
 To create the app, perform the following:
@@ -31,4 +31,10 @@ Next, start the app as follows:
 apc app start mysql-backup-app
 ```
 
-Navigate to the URL provided from the app staging process to view the output page. It should display the number of seconds since the last successful backup. If a backup hasn't happened in over a day and a half it throws a 500 error and displays the number of seconds since the last successful backup. 
+Navigate to the URL provided from the app staging process to view the output page. You should see:
+
+* A 503 response code and the message "First backup has not completed" if no backups have yet completed.
+* A 200 response code and the message "Last backup completed [number of seconds] seconds ago" once hourly backups are running.
+* A 500 response code and the message "ERROR: No new backups in over [number of seconds] seconds" if a backup hasn't happened in over 12 hours.
+
+A monitoring application can check the URL and send an alert if the response code is an error.
