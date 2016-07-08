@@ -132,70 +132,98 @@ app.get('/stop', function(req, res) {
 app.get('/createdocker', function(req, res) {
     var dockername = req.query['dockername'];
     var dockerimage = req.query['dockerimage'];
-    var sandbox = req.query['sandbox'];
+    var namespace = ""
     var uuid = "";
+    var responseString = "";
 //var exposedport = req.query['exposedport'];
 var startcommand = req.query['startcommand'];
-var body =  {
-    "allow_egress": true,
-    "env": {},
-    "exposed_ports": [],
-    "image_url":"https://index.docker.io/" + dockerimage + ":latest",
-    "job_fqn": "job::" + sandbox + "::" + dockername,
-    "resources": {
-        "cpu":0,
-        "disk":1073741824,
-        "memory":268435456,
-        "netmax":0,
-        "network":5000000
-    },
-    "routes": {},
-    "start":true,
-    "start_command":[
-    startcommand
-    ]
-};
 
 res.write(defaultHTML);
 res.write('Creating Docker Job.............');
 
 var options = {
-    url: 'http://' + address + '/v1/jobs/docker',
-    method: 'POST',
+    host: address,
+    port: 80,
+    path: '/v1/namespace/default',
     headers: {
-        'Authorization': 'Bearer ' + accesstoken,
-        'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(body)
-}
-
-request(options, function(error, response, body) {
-    if (response.statusCode != "200") {
-        res.end("<br><br>An error has occurred. ");
-    } else {
-        var location = JSON.parse(body);
-        if (!location.location) {
-            res.end("<br><br>An error has occurred.");
-        } else {
-            var parse1 = location.location;
-            uuid = parse1.replace("http://" + address, "");
-
-            res.end(
-                '<form action="/viewtask" method="get">'
-                + '<input type="hidden" name="app" value="' + dockername + '">'
-                + '<input type="hidden" name="uuid" value="' + uuid + '">'
-                + '<br><br>'
-                + 'Click View to check application status. '
-                + '<br><br>'
-                + '<input type="submit" value="View"'
-                + ' name="Submit" id="frm1_view" />'
-                + '</form>'
-                );
-        }
+        'Authorization': 'Bearer ' + accesstoken
     }
+};
 
-}).on('error', function(e) {
-    console.log("Got error 2 : " + e.message);
+var namespace = http.get(options, function(response){
+    response.on('data', function(data) {
+        responseString += data;
+    });
+    response.on('end', function(data){
+
+        if(response.statusCode != 200) {
+         res.end('<br><br>An error has occurred with the request. Are you authenticated?');
+     } else {
+
+        var parseResponse = JSON.parse(responseString);
+        namespace = parseResponse.namespace;
+
+
+        var body =  {
+            "allow_egress": true,
+            "env": {},
+            "exposed_ports": [],
+            "image_url":"https://index.docker.io/" + dockerimage + ":latest",
+            "job_fqn": "job::" + namespace + "::" + dockername,
+            "resources": { 
+                "cpu":0,
+                "disk":1073741824,
+                "memory":268435456,
+                "netmax":0,
+                "network":5000000
+            },
+            "routes": {},
+            "start":true,
+            "start_command":[
+            startcommand
+            ]
+        };
+
+        var options = {
+            url: 'http://' + address + '/v1/jobs/docker',
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer ' + accesstoken,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(body)
+        }
+
+        request(options, function(error, response, body) {
+            if (response.statusCode != "200") {
+                res.end("<br><br>An error has occurred. ");
+            } else {
+                var location = JSON.parse(body);
+                if (!location.location) {
+                    res.end("<br><br>An error has occurred.");
+                } else {
+                    var parse1 = location.location;
+                    uuid = parse1.replace("http://" + address, "");
+
+                    res.end(
+                        '<form action="/viewtask" method="get">'
+                        + '<input type="hidden" name="app" value="' + dockername + '">'
+                        + '<input type="hidden" name="uuid" value="' + uuid + '">'
+                        + '<br><br>'
+                        + 'Click View to check application status. '
+                        + '<br><br>'
+                        + '<input type="submit" value="View"'
+                        + ' name="Submit" id="frm1_view" />'
+                        + '</form>'
+                        );
+                }
+            }
+
+        }).on('error', function(e) {
+            console.log("Got error 2 : " + e.message);
+        });
+    }
+});
 });
 });
 
@@ -1345,10 +1373,10 @@ app.get('/docker', function(req, res){
         + 'Name for Application: '
         + '<input type="text" name="dockername" value="myapp_' + randomdata + '">'
         + '<br><br>'
-        + 'Sandbox to run Application: '
+//        + 'Sandbox to run Application: '
 // + '<input type="text" name="sandbox" value="/sandbox/demo" readonly>'
-+ '<input type="text" name="sandbox" value="/sandbox/demo">'
-+ '<br><br>'
+//+ '<input type="text" name="sandbox" value="/sandbox/demo">'
++// '<br><br>'
 + 'Docker Hub image to run: '
 + '<input type="text" name="dockerimage" value="apcerademos/empty">'
 + '<br><br>'
