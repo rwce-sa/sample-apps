@@ -762,94 +762,118 @@ app.get('/appfrompackage', function(req, res){
    var appname = req.query['app'];
    var startcommand = req.query['startcommand'];
    var packagename = req.query['package'];
-   var namespace = req.query['ns'];
+   var namespace = "";
    var appfrompackage = 'package::' + packagename;
    var PackageresponseString = "";
    var package_uuid = "";
-   var fqn = 'job::' + namespace + '::' + appname;
+   var fqn = "";
    var responseString = "";
    var instances = "1";
 
-   var options = {  uri: 'http://' + address + ':80/v1/packages?fqn=' + appfrompackage, headers: {
-    'Authorization': 'Bearer ' + accesstoken}};
-
-    var getPackage = request.get(options, function(error, response, body) { 
-      if(body.indexOf('uuid') > -1 ){
-        var get_uuid =  body.split(":");
-        var split_uuid =  get_uuid[1].split(",");
-        package_uuid = split_uuid[0];
-        package_uuid =package_uuid.replace('\"','');
-        package_uuid =package_uuid.replace('\"','');
-
-        if(package_uuid.length > 15) {
-
-          var request_body =  {
-            "name": appname,
-            "fqn": fqn,
-            "num_instances":  1,
-            "tags": { "app": appname },
-            "packages": [{ "uuid": package_uuid 
-        }],
-        "processes": { "app": { 
-            "start_command_raw": [],
-            "start_command": startcommand,
-            "start_command_timeout": 30,
-            "stop_command_raw": [],
-            "stop_command": "",
-            "stop_timeout": 5
-        },
-    },
-    "resources": {
-        "cpu": 0,
-        "memory": 268435456,
-        "disk": 104857600,
-        "network": 5000000,
-        "netmax": 0
-    },
-    "ports": [
-    {
-      "number": 0,
-      "optional": false,
-      "routes": [
-      {
-          "type": "http",
-          "endpoint": appname + ".demo.apcera.net",
-          "weight": 0
-      }
-      ]
-  }
-  ],
-  "state": "started",
-  "tags": {
-    "app": appname
-}
-};
-
-var options = {
-    url: 'http://' + address + '/v1/jobs',
-    method: 'POST',
+   var options = {
+    host: address,
+    port: 80,
+    path: '/v1/namespace/default',
     headers: {
-        'Authorization': 'Bearer ' + accesstoken,
-        'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(request_body)
+        'Authorization': 'Bearer ' + accesstoken
+    }
 }
+var namespace = http.get(options, function(response){
+    response.on('data', function(data) {
+        responseString += data;
+    });
+    response.on('end', function(data){
+        if(response.statusCode != 200) {
+            res.end('An error has occurred with the request. Are you authenticated?');
+        } else {
+            var parseResponse = JSON.parse(responseString);
+            namespace = parseResponse.namespace;
+            fqn = 'job::' + namespace + '::' + appname;
 
-request(options, function(error, response, body) {
-    if (response.statusCode != "200") {
-        res.end("An error has occurred.");
+            var options = {  uri: 'http://' + address + ':80/v1/packages?fqn=' + appfrompackage, headers: {
+                'Authorization': 'Bearer ' + accesstoken}};
+
+                var getPackage = request.get(options, function(error, response, body) { 
+                  if(body.indexOf('uuid') > -1 ){
+                    var get_uuid =  body.split(":");
+                    var split_uuid =  get_uuid[1].split(",");
+                    package_uuid = split_uuid[0];
+                    package_uuid =package_uuid.replace('\"','');
+                    package_uuid =package_uuid.replace('\"','');
+
+                    if(package_uuid.length > 15) {
+
+                      var request_body =  {
+                        "name": appname,
+                        "fqn": fqn,
+                        "num_instances":  1,
+                        "tags": { "app": appname },
+                        "packages": [{ "uuid": package_uuid 
+                    }],
+                    "processes": { "app": { 
+                        "start_command_raw": [],
+                        "start_command": startcommand,
+                        "start_command_timeout": 30,
+                        "stop_command_raw": [],
+                        "stop_command": "",
+                        "stop_timeout": 5
+                    },
+                },
+                "resources": {
+                    "cpu": 0,
+                    "memory": 268435456,
+                    "disk": 104857600,
+                    "network": 5000000,
+                    "netmax": 0
+                },
+                "ports": [
+                {
+                  "number": 0,
+                  "optional": false,
+                  "routes": [
+                  {
+                      "type": "http",
+                      "endpoint": appname + ".demo.apcera.net",
+                      "weight": 0
+                  }
+                  ]
+              }
+              ],
+              "state": "started",
+              "tags": {
+                "app": appname
+            }
+        };
+
+        var options = {
+            url: 'http://' + address + '/v1/jobs',
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer ' + accesstoken,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(request_body)
+        }
+
+        request(options, function(error, response, body) {
+            if (response.statusCode != "200") {
+                res.end("An error has occurred.");
+            } else {
+             res.send('Successful!');
+         }
+     })
     } else {
-     res.send('Successful!');
- }
-})
-} else {
-    res.end('Error: UUID parsing error!');    
-}
+        res.end('Error: UUID parsing error!');    
+    }
 } else {
     res.end('An error has occurred.');
 }
+});
+            }
+        });
 
 });
+
 });
 
 
